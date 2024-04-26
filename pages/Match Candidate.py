@@ -5,13 +5,12 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 
+# Initialize the Vertex AI with Google Cloud credentials
 load_dotenv()
-# Load environment variables for sensitive data
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_USER')
 NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
-
 def generate_openai_embeddings(text):
     # Connect to OpenAI API
     client = OpenAI(api_key=OPENAI_API_KEY)
@@ -67,13 +66,40 @@ def find_similar_nodes(description_embedding):
 
     return similar_node_ids, skill_info
 
+def get_summary(content):
+    client = OpenAI(api_key=OPENAI_API_KEY)
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "Summarize content Give in 1 line and max 20 words"
+            },
+            {
+                "role": "user",
+                "content": content
+            }
+        ],
+        temperature=0,
+        max_tokens=1024,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+
+    summary = response.choices[0].message.content.strip()
+    return summary
+
+
+
 # Streamlit app
 st.title("Job Description - Candidate Matcher")
 
 # Get job description input
 job_description = st.text_area("Enter job description:")
 
-if st.button("Best Candiate Match"):
+if st.button("Best Candidate Match"):
     # Generate OpenAI embedding
     embedding = generate_openai_embeddings(job_description)
 
@@ -81,18 +107,23 @@ if st.button("Best Candiate Match"):
     similar_node_ids, skill_info = find_similar_nodes(embedding)
 
     # Display similar job IDs
-    st.write("Matched Candidates IDs:")
-    st.write(", ".join(map(str, similar_node_ids)))
+    st.write("Matched Candidates IDs: ", ", ".join(map(str, similar_node_ids)))
 
     # Display person and skill information in a dropdown table
     st.subheader("Matched Candidates :")
     with st.expander("Expand to see details associated with these candidates"):
         data = []
         for info in skill_info:
+            # Use GPT-4 to summarize the person description
+            summary = get_summary(info["person_description"])
             data.append({
                 "Person ID": info["person_id"],
-                "Person Description": info["person_description"],
+                "Person Description": summary,
                 "Skills": ", ".join(map(str, info["skill_ids"]))
             })
         df = pd.DataFrame(data)
         st.table(df)
+
+
+
+

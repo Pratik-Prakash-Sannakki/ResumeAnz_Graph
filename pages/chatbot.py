@@ -1,25 +1,21 @@
 import streamlit as st
 import vertexai
-from langchain.llms import VertexAI
 from langchain.chains import GraphCypherQAChain
 from langchain.chat_models import ChatOpenAI
 from langchain.graphs import Neo4jGraph
-from langchain.prompts.prompt import PromptTemplate
+from langchain.prompts import PromptTemplate
 import os
-# Initialize the Vertex AI with Google Cloud credentials
 from google.oauth2 import service_account
-
 from dotenv import load_dotenv
 
+# Initialize the Vertex AI with Google Cloud credentials
 load_dotenv()
-# Load environment variables for sensitive data
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_USER')
 NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
 
 credentials = service_account.Credentials.from_service_account_file("resumeanz-db0c67277823.json")
-
 vertexai.init(project='resumeanz', credentials=credentials)
 
 # Define the Cypher generation prompt
@@ -45,39 +41,39 @@ Answer: MATCH (p:Person)-[:HAS_POSITION]->(pos:Position) WHERE toLower(pos.title
 Question: {question}
 Answer:
 """
-
 CYPHER_GENERATION_PROMPT = PromptTemplate(
     input_variables=["schema", "question"], 
     template=CYPHER_GENERATION_TEMPLATE
 )
 
-graph = Neo4jGraph(
-    url=NEO4J_URI, 
-    username=NEO4J_USER, 
-    password=NEO4J_PASSWORD
-)
-
-
+graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USER, password=NEO4J_PASSWORD)
 chain = GraphCypherQAChain.from_llm(
-    ChatOpenAI(temperature=0,model_name='gpt-4'),
-      graph=graph, 
-      verbose=True,
-      cypher_prompt=CYPHER_GENERATION_PROMPT,
-      return_intermediate_steps=True
+    ChatOpenAI(temperature=0, model_name='gpt-4'),
+    graph=graph, 
+    verbose=True,
+    cypher_prompt=CYPHER_GENERATION_PROMPT,
+    return_intermediate_steps=True
 )
-
-def get_response(question):
-    response = chain.run(question)
-
-    return response
-    
 
 # Streamlit page setup
 st.title('Chatbot for Neo4j Query Generation')
+
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display chat messages from history
+for message in st.session_state.messages:
+    with st.expander(f"{message['role']} says:",expanded=True):
+        st.write(message['content'])
+
+# React to user input
 user_query = st.text_input("Enter your question:", placeholder="Which people have held a position in London with a start date in 2019?")
 if st.button("Generate Cypher Query"):
     if user_query:
-        result = get_response(user_query)
-        st.write("Final Cypher Query:", result)
+        st.session_state.messages.append({"role": "User", "content": user_query})
+        result = chain.run(user_query)
+        st.session_state.messages.append({"role": "Bot", "content": f"ResumeAnz : {result}"})
+        st.experimental_rerun()
     else:
         st.error("Please enter a question to generate the Cypher query.")
