@@ -2,16 +2,15 @@ import streamlit as st
 
 # Set page config to use the custom logo and set a title
 st.set_page_config(
-    page_title="TalentMatch Pro",
+    page_title="ResumeAnz",
     page_icon="resumeanz.png",  # Update this to the path where the logo is saved
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 def main():
-    st.title("Welcome to TalentMatch Pro")
+    st.title("Welcome to ResumeAnz")
     st.header("Revolutionizing the Recruitment Process")
-    st.subheader("Advanced Candidate Matching and Interactive Recruitment Assistance")
     
     st.image("resumeanz.png", width=200)  # Show the logo on the page
     
@@ -25,7 +24,7 @@ def main():
     - **Accuracy**: Find the best candidates for the job.
     
     ## Contact Us
-    For more information, please [visit our website](#) or contact us at info@talentmatchpro.com.
+    For more information, please [visit our website](#) or contact us at info@resumeanz.com.
     """)
     
     st.sidebar.info("Explore the functionalities using the sidebar options.")
